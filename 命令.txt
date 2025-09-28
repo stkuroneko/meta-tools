@@ -1,1 +1,0 @@
-python prepareSingleImage.py --arch ipq6018 --fltype nand --genpart
