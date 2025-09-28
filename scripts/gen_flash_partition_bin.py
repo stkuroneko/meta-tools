@@ -28,6 +28,7 @@ def process_nand_device(pagesize, pages_per_block, total_blocks, entry, nand_typ
         global ARCH_NAME
         global outputdir
         global QCN9000
+        global QCN9224
 
 	nand_pagesize = pagesize
 	nand_pages_per_block = pages_per_block
@@ -38,10 +39,15 @@ def process_nand_device(pagesize, pages_per_block, total_blocks, entry, nand_typ
 	elif nand_type == "audio-2k":
 		nand_partition = "$$/" + ARCH_NAME + "/flash_partition/nand-audio-partition.xml"
 	elif nand_type == "4k":
-		nand_partition = "$$/" + ARCH_NAME + "/flash_partition/nand-4k-partition.xml"
+		if QCN9224:
+			nand_partition = "$$/" + ARCH_NAME + "/flash_partition/nand-4k-partition-qcn9224.xml"
+		else:
+			nand_partition = "$$/" + ARCH_NAME + "/flash_partition/nand-4k-partition.xml"
 	elif nand_type == "2k":
 		if QCN9000:
 			nand_partition = "$$/" + ARCH_NAME + "/flash_partition/nand-partition-qcn9000.xml"
+		elif QCN9224:
+			nand_partition = "$$/" + ARCH_NAME + "/flash_partition/nand-partition-qcn9224.xml"
 		else:
 			nand_partition = "$$/" + ARCH_NAME + "/flash_partition/nand-partition.xml"
 
@@ -62,6 +68,9 @@ def process_nand_device(pagesize, pages_per_block, total_blocks, entry, nand_typ
 		if QCN9000:
 			nandsyspartition = outputdir + '/nand-system-partition-' + ARCH_NAME + '-qcn9000.bin'
 			nanduserpartition = 'nand-user-partition-qcn9000.bin'
+		elif QCN9224:
+			nandsyspartition = outputdir + '/nand-system-partition-' + ARCH_NAME + '-qcn9224.bin'
+			nanduserpartition = 'nand-user-partition-qcn9224.bin'
 		else:
 			nandsyspartition = outputdir + '/nand-system-partition-' + ARCH_NAME + '.bin'
 			nanduserpartition = 'nand-user-partition.bin'
@@ -71,8 +80,12 @@ def process_nand_device(pagesize, pages_per_block, total_blocks, entry, nand_typ
 			nand_type = "audio-"
 		elif nand_type == "4k":
 			nand_type = ""
-		nandsyspartition = outputdir + '/nand-' + nand_type + 'system-partition-' + ARCH_NAME + '-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB.bin'
-		nanduserpartition = 'nand-' + nand_type + 'user-partition-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB.bin'
+		if QCN9224:
+			nandsyspartition = outputdir + '/nand-' + nand_type + 'system-partition-' + ARCH_NAME + '-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB-qcn9224.bin'
+			nanduserpartition = 'nand-' + nand_type + 'user-partition-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB-qcn9224.bin'
+		else:
+			nandsyspartition = outputdir + '/nand-' + nand_type + 'system-partition-' + ARCH_NAME + '-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB.bin'
+			nanduserpartition = 'nand-' + nand_type + 'user-partition-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB.bin'
 
 	nanduserbin= os.path.splitext(nanduserpartition)[0] + ".bin"
 
@@ -123,6 +136,7 @@ def process_nand(config_path, flash_type):
 	global ARCH_NAME
 	global outputdir
 	global QCN9000
+	global QCN9224
 
 	tree = ET.parse(config_path)
 	root = tree.getroot()
@@ -131,6 +145,7 @@ def process_nand(config_path, flash_type):
 	ARCH_NAME = str(arch.text)
 	entry = False
 	QCN9000 = False
+	QCN9224 = False
 
 	if ARCH_NAME == "ipq807x":
 		QCN9000 = True
@@ -145,10 +160,17 @@ def process_nand(config_path, flash_type):
 			nand_total_blocks = int(nand_param.find(".//total_block").text)
 			nand_type = nand_param.get('type')
 
+			if ARCH_NAME == "ipq9574":
+				QCN9224 = True
+
 			if QCN9000:
 				if process_nand_device(nand_pagesize, nand_pages_per_block, nand_total_blocks, entry, nand_type) != 0:
 					return -1
 				QCN9000 = False
+			elif QCN9224:
+				if process_nand_device(nand_pagesize, nand_pages_per_block, nand_total_blocks, entry, nand_type) != 0:
+					return -1
+				QCN9224 = False
 
 			if process_nand_device(nand_pagesize, nand_pages_per_block, nand_total_blocks, entry, nand_type) != 0:
 				return -1
@@ -158,10 +180,17 @@ def process_nand(config_path, flash_type):
 		nand_pages_per_block = int(nand_param.find('pages_per_block').text)
 		nand_total_blocks = int(nand_param.find('total_block').text)
 
+		if ARCH_NAME == "ipq9574":
+			QCN9224 = True
+
 		if QCN9000:
 			if process_nand_device(nand_pagesize, nand_pages_per_block, nand_total_blocks, entry, "2k") != 0:
 				return -1
 			QCN9000 = False
+		elif QCN9224:
+			if process_nand_device(nand_pagesize, nand_pages_per_block, nand_total_blocks, entry, "2k") != 0:
+				return -1
+			QCN9224 = False
 
 		if process_nand_device(nand_pagesize, nand_pages_per_block, nand_total_blocks, entry, "2k") != 0:
 			return -1
@@ -266,14 +295,20 @@ def process_norplusnand_device(nor_pagesize, nor_pages_per_block, nor_total_bloc
 	global ARCH_NAME
 	global outputdir
         global QCN9000
+        global QCN9224
 
 	if nand_pagesize == 2048:
 		if QCN9000:
 			norplusnand_partition = "$$/" + ARCH_NAME + "/flash_partition/norplusnand-partition-qcn9000.xml"
+		elif QCN9224:
+			norplusnand_partition = "$$/" + ARCH_NAME + "/flash_partition/norplusnand-partition-qcn9224.xml"
 		else:
 			norplusnand_partition = "$$/" + ARCH_NAME + "/flash_partition/norplusnand-partition.xml"
 	else:
-		norplusnand_partition = "$$/" + ARCH_NAME + "/flash_partition/norplusnand-4k-partition.xml"
+		if QCN9224:
+			norplusnand_partition = "$$/" + ARCH_NAME + "/flash_partition/norplusnand-4k-partition-qcn9224.xml"
+		else:
+			norplusnand_partition = "$$/" + ARCH_NAME + "/flash_partition/norplusnand-4k-partition.xml"
 
 	norplusnand_partition = norplusnand_partition.replace('$$', cdir)
 	nand_parts = Nand_Params(nand_pagesize, nand_pages_per_block, nand_total_blocks)
@@ -292,13 +327,20 @@ def process_norplusnand_device(nor_pagesize, nor_pages_per_block, nor_total_bloc
 		if QCN9000:
 			norplusnandsyspartition = outputdir + '/norplusnand-system-partition-' + ARCH_NAME + '-qcn9000.bin'
 			userpart = 'norplusnand-user-partition-qcn9000.bin'
+		elif QCN9224:
+			norplusnandsyspartition = outputdir + '/norplusnand-system-partition-' + ARCH_NAME + '-qcn9224.bin'
+			userpart = 'norplusnand-user-partition-qcn9224.bin'
 		else:
 			norplusnandsyspartition = outputdir + '/norplusnand-system-partition-' + ARCH_NAME + '.bin'
 			userpart = 'norplusnand-user-partition.bin'
 	else:
 		nand_blocksize = (nand_pagesize * nand_pages_per_block) / 1024
-		norplusnandsyspartition = outputdir + '/norplusnand-system-partition-' + ARCH_NAME + '-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB.bin'
-		userpart = 'norplusnand-user-partition-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB.bin'
+		if QCN9224:
+			norplusnandsyspartition = outputdir + '/norplusnand-system-partition-' + ARCH_NAME + '-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB-qcn9224.bin'
+			userpart = 'norplusnand-user-partition-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB-qcn9224.bin'
+		else:
+			norplusnandsyspartition = outputdir + '/norplusnand-system-partition-' + ARCH_NAME + '-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB.bin'
+			userpart = 'norplusnand-user-partition-m' + str(nand_pagesize) + '-p' + str(nand_blocksize) + 'KiB.bin'
 
 	norplusnanduserbin= os.path.splitext(userpart)[0] +".bin"
 
@@ -358,6 +400,7 @@ def process_norplusnand(config_path, flash_type):
 	global ARCH_NAME
 	global outputdir
 	global QCN9000
+	global QCN9224
 
 	tree = ET.parse(config_path)
 	root = tree.getroot()
@@ -384,6 +427,7 @@ def process_norplusnand(config_path, flash_type):
 
 	entry = False
 	QCN9000 = False
+	QCN9224 = False
 
 	if ARCH_NAME == "ipq807x":
 		QCN9000 = True
@@ -397,12 +441,21 @@ def process_norplusnand(config_path, flash_type):
 			nand_pages_per_block = int(nand_param.find(".//pages_per_block").text)
 			nand_total_blocks = int(nand_param.find(".//total_block").text)
 
+			if ARCH_NAME == "ipq9574":
+				QCN9224 = True
+
 			if QCN9000:
 				if process_norplusnand_device(nor_pagesize,
 						nor_pages_per_block, nor_total_blocks, nand_pagesize,
 						nand_pages_per_block, nand_total_blocks, entry) != 0:
 					return -1
 				QCN9000 = False
+			elif QCN9224:
+				if process_norplusnand_device(nor_pagesize,
+						nor_pages_per_block, nor_total_blocks, nand_pagesize,
+						nand_pages_per_block, nand_total_blocks, entry) != 0:
+					return -1
+				QCN9224 = False
 
 			if process_norplusnand_device(nor_pagesize,
 				nor_pages_per_block, nor_total_blocks, nand_pagesize,
@@ -415,12 +468,21 @@ def process_norplusnand(config_path, flash_type):
 		nand_pages_per_block = int(nand_param.find('pages_per_block').text)
 		nand_total_blocks = int(nand_param.find('total_block').text)
 
+		if ARCH_NAME == "ipq9574":
+			QCN9224 = True
+
 		if QCN9000:
 			if process_norplusnand_device(nor_pagesize,
 					nor_pages_per_block, nor_total_blocks, nand_pagesize,
 					nand_pages_per_block, nand_total_blocks, entry) != 0:
 				return -1
 			QCN9000 = False
+		elif QCN9224:
+			if process_norplusnand_device(nor_pagesize,
+					nor_pages_per_block, nor_total_blocks, nand_pagesize,
+					nand_pages_per_block, nand_total_blocks, entry) != 0:
+				return -1
+			QCN9224 = False
 
 		if process_norplusnand_device(nor_pagesize,
 			nor_pages_per_block, nor_total_blocks, nand_pagesize,
@@ -493,36 +555,65 @@ def process_emmc(config_path, flash_type):
 		return prc.returncode
 	else:
 		print '...System partition created'
+
+	if ARCH_NAME == "ipq9574":
+
+		print "\n------------------------------------------------------------------------------\n"
+		print 'Start creating System partition for qcn9224\n'
+
+		print '\tCreating rawprogram2.xml and patch2.xml',
+		prc = subprocess.Popen(['python', ptool, '-x', emmc_partition, '-p', '2'], cwd=outputdir)
+		prc.wait()
+		if prc.returncode != 0:
+			print 'ERROR: unable to create rawprogram2.xml and patch2.xml'
+			return prc.returncode
+		else:
+			print '...rawprogram2.xml and patch2.xml created'
+
+		rawprogram_path = os.path.join(outputdir, 'rawprogram2.xml')
+		patch_path = os.path.join(outputdir, 'patch2.xml')
+
+		print '\t rawprogram' + rawprogram_path
+		print '\t patch' + patch_path
+
+		print '\tRunning msp.py to update gpt_main2.bin partition'
+		prc = subprocess.Popen([
+			'python',
+			msp,
+			'-r',
+			rawprogram_path,
+			'-p',
+			patch_path,
+			'-d',
+			str(emmc_total_blocks),
+			'-n',
+			], cwd=outputdir)
+		prc.wait()
+
+		if prc.returncode != 0:
+			print 'ERROR: unable to create system partition'
+			return prc.returncode
+		else:
+			print '...System partition created'
+
 	return 0
 
 
-def process_norplusemmc(config_path, flash_type):
+def process_norplusemmc_device(nor_pagesize, nor_pages_per_block, nor_total_blocks):
 	global mbn_gen
 	global syspart
 	global partition_tool
 	global cdir
-	global ptool
-	global msp
 	global ARCH_NAME
 	global outputdir
+	global QCN9224
 
-	tree = ET.parse(config_path)
-	root = tree.getroot()
+	if QCN9224:
+		norplusemmc_partition = "$$/" + ARCH_NAME + "/flash_partition/norplusemmc-partition-qcn9224.xml"
+	else:
+		norplusemmc_partition = "$$/" + ARCH_NAME + "/flash_partition/norplusemmc-partition.xml"
 
-	arch = root.find(".//data[@type='ARCH']/SOC")
-	ARCH_NAME = str(arch.text)
-
-	blocks = root.find(".//data[@type='EMMC_PARAMETER']")
-	emmc_total_blocks = int(blocks.find('total_block').text)
-
-	nor_param = root.find(".//data[@type='NORPLUSEMMC_PARAMETER']")
-	nor_pagesize = int(nor_param.find('page_size').text)
-	nor_pages_per_block = int(nor_param.find('pages_per_block').text)
-	nor_total_blocks = int(nor_param.find('total_block').text)
-	norplusemmc_partition = "$$/" + ARCH_NAME + "/flash_partition/norplusemmc-partition.xml"
-	emmc_partition = "$$/" + ARCH_NAME + "/flash_partition/emmc-partition.xml"
 	norplusemmc_partition = norplusemmc_partition.replace('$$', cdir)
-	emmc_partition = emmc_partition.replace('$$', cdir)
 
 	if ARCH_NAME != "ipq806x":
 		root_part = ET.parse(norplusemmc_partition)
@@ -538,19 +629,19 @@ def process_norplusemmc(config_path, flash_type):
 	mbn_gen = '$$/scripts/nand_mbn_generator.py'
 	mbn_gen = mbn_gen.replace('$$', cdir)
 
-	ptool = '$$/scripts/ptool.py'
-	ptool = ptool.replace('$$', cdir)
-	msp = '$$/scripts/msp.py'
-	msp = msp.replace('$$', cdir)
-
 	if ARCH_NAME == "ipq806x":
 		partition_tool = outputdir + '/nor_tool'
 	else:
 		partition_tool = outputdir + '/partition_tool'
 	os.chmod(partition_tool, 0744)
 
-	syspart = outputdir + '/norplusemmc-system-partition-' + ARCH_NAME + '.bin'
-	userpart = 'norplusemmc-user-partition.bin'
+	if QCN9224:
+		syspart = outputdir + '/norplusemmc-system-partition-' + ARCH_NAME + '-qcn9224.bin'
+		userpart = 'norplusemmc-user-partition-qcn9224.bin'
+	else:
+		syspart = outputdir + '/norplusemmc-system-partition-' + ARCH_NAME + '.bin'
+		userpart = 'norplusemmc-user-partition.bin'
+
 	norplusemmcuserbin= os.path.splitext(userpart)[0] + ".bin"
 
 	print '\tNor page size: ' + str(nor_parts.pagesize) + ', pages/block: ' \
@@ -592,6 +683,53 @@ def process_norplusemmc(config_path, flash_type):
 	else:
 		print '...System partition created'
 
+	return 0
+
+
+def process_norplusemmc(config_path, flash_type):
+	global mbn_gen
+	global syspart
+	global partition_tool
+	global cdir
+	global ptool
+	global msp
+	global ARCH_NAME
+	global outputdir
+	global QCN9224
+
+	tree = ET.parse(config_path)
+	root = tree.getroot()
+	QCN9224 = False
+
+	arch = root.find(".//data[@type='ARCH']/SOC")
+	ARCH_NAME = str(arch.text)
+
+	if ARCH_NAME == "ipq9574":
+		QCN9224 = True
+
+	blocks = root.find(".//data[@type='EMMC_PARAMETER']")
+	emmc_total_blocks = int(blocks.find('total_block').text)
+
+	nor_param = root.find(".//data[@type='NORPLUSEMMC_PARAMETER']")
+	nor_pagesize = int(nor_param.find('page_size').text)
+	nor_pages_per_block = int(nor_param.find('pages_per_block').text)
+	nor_total_blocks = int(nor_param.find('total_block').text)
+	emmc_partition = "$$/" + ARCH_NAME + "/flash_partition/emmc-partition.xml"
+	emmc_partition = emmc_partition.replace('$$', cdir)
+
+	ptool = '$$/scripts/ptool.py'
+	ptool = ptool.replace('$$', cdir)
+	msp = '$$/scripts/msp.py'
+	msp = msp.replace('$$', cdir)
+
+	if QCN9224:
+		if process_norplusemmc_device(nor_pagesize, nor_pages_per_block, nor_total_blocks) != 0:
+			return -1
+		QCN9224 = False
+
+	if process_norplusemmc_device(nor_pagesize, nor_pages_per_block, nor_total_blocks) != 0:
+		return -1
+
 	print '\tCreating rawprogram1.xml and patch1.xml',
 	prc = subprocess.Popen(['python', ptool, '-x', emmc_partition, '-p', '1'], cwd=outputdir)
 	prc.wait()
@@ -625,7 +763,49 @@ def process_norplusemmc(config_path, flash_type):
 		return prc.returncode
 	else:
 		print '...System partition created'
-		return 0
+
+	if ARCH_NAME == "ipq9574":
+
+		print "\n------------------------------------------------------------------------------\n"
+		print 'Start creating System partition for qcn9224\n'
+
+		print '\tCreating rawprogram3.xml and patch3.xml',
+		prc = subprocess.Popen(['python', ptool, '-x', emmc_partition, '-p', '3'], cwd=outputdir)
+		prc.wait()
+		if prc.returncode != 0:
+			print 'ERROR: unable to create rawprogram3.xml and patch3.xml'
+			return prc.returncode
+		else:
+			print '...rawprogram3.xml and patch3.xml created'
+
+		rawprogram_path = os.path.join(outputdir, 'rawprogram3.xml')
+		patch_path = os.path.join(outputdir, 'patch3.xml')
+
+		print '\t rawprogram' + rawprogram_path
+		print '\t patch' + patch_path
+
+		print '\tRunning msp.py to update gpt_main2.bin partition'
+		prc = subprocess.Popen([
+			'python',
+			msp,
+			'-r',
+			rawprogram_path,
+			'-p',
+			patch_path,
+			'-d',
+			str(emmc_total_blocks),
+			'-n',
+			], cwd=outputdir)
+		prc.wait()
+
+		if prc.returncode != 0:
+			print 'ERROR: unable to create system partition'
+			return prc.returncode
+		else:
+			print '...System partition created'
+
+	return 0
+
 
 def main():
 

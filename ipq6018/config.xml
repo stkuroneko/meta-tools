@@ -90,6 +90,12 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 			<discrete_smps>true</discrete_smps>
 		</entry>
 		<entry>
+			<machid>0x8030004</machid>
+			<board>AP-CP01-C5</board>
+			<spi_nand>false</spi_nand>
+			<memory>256M32_DDR3</memory>
+		</entry>
+		<entry>
 			<machid>0x8030100</machid>
 			<board>AP-CP02-C1</board>
 			<spi_nand>false</spi_nand>

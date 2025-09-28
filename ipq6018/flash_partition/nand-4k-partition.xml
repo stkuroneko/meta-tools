@@ -192,8 +192,8 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 			<attr>0xFF</attr>
 			<attr>0x00</attr>
 			<attr>0xFF</attr>
-			<img_name type="string" mode="32" image_type="hlos">openwrt-ipq-ipq60xx-ubi-root-m4096-p256KiB.img</img_name>
-			<img_name type="string" mode="64" image_type="hlos">openwrt-ipq-ipq60xx_64-ubi-root-m4096-p256KiB.img</img_name>
+			<img_name type="string" mode="32" image_type="hlos">openwrt-ipq60xx-ipq60xx_32-ubi-root-m4096-p256KiB.img</img_name>
+			<img_name type="string" mode="64" image_type="hlos">openwrt-ipq60xx-generic-ubi-root-m4096-p256KiB.img</img_name>
 		</partition>
 		<partition>
 			<name length="16" type="string">rootfs_1</name>

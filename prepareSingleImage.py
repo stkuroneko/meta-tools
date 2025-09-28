@@ -1,5 +1,5 @@
 # ===========================================================================
-#Copyright (c) 2017, 2019 Qualcomm Technologies, Inc.
+#Copyright (c) 2017, 2019, 2021 Qualcomm Technologies, Inc.
 #All Rights Reserved.
 #Confidential and Proprietary - Qualcomm Technologies, Inc.
 # ===========================================================================
@@ -29,7 +29,7 @@ mbn_v6 = ""
 def print_help():
 	print "\nUsage: python prepareSingleImage.py <option> <value>\n"
 
-	print "--arch \t\tArch(e.g ipq40xx/ipq807x/ipq807x_64/ipq6018/ipq6018_64/ipq5018/ipq5018_64/ipq9048/ipq9048_64)\n"
+	print "--arch \t\tArch(e.g ipq40xx/ipq807x/ipq807x_64/ipq6018/ipq6018_64/ipq5018/ipq5018_64/ipq9574/ipq9574_64/ipq5332/ipq5332_64)\n"
 	print " \t\te.g python prepareSingleImage.py --arch ipq807x\n\n"
 
 	print "--fltype \tFlash Type (nor/nand/emmc/norplusnand/norplusemmc)"
@@ -79,7 +79,7 @@ def print_help():
 
 	print "--genmbn \tWhether u-boot.elf to be converted to u-boot.mbn"
 	print "\t\tIf not specified u-boot.mbn will not be generated"
-	print "\t\tThis is currently used/needed only for IPQ807x, IPQ6018, IPQ5018"
+	print "\t\tThis is currently used/needed only for IPQ807x, IPQ6018, IPQ5018, IPQ9574, IPQ5332"
 	print "\t\tThis Argument does not take any value\n"
 	print "\t\te.g python prepareSingleImage.py --genmbn\n\n"
 
@@ -176,6 +176,10 @@ def gen_bootldr():
 def gen_mbn():
 	global srcDir
 	global mbn_v6
+	global arch
+
+	if arch == "ipq5332":
+		arch = "devsoc"
 
 	bootconfig_path = srcDir + '/elftombn.py'
 	print "Converting u-boot elf to mbn ..."
@@ -187,12 +191,15 @@ def gen_mbn():
 			prc = subprocess.Popen(['python', bootconfig_path, '-f', inDir + "/openwrt-" + arch + "_tiny" + "-u-boot.elf", '-o', inDir + "/openwrt-" + arch + "_tiny" + "-u-boot.mbn"], cwd=cdir)
 
 	else:
-		prc = subprocess.Popen(['python', bootconfig_path, '-f', inDir + "/openwrt-" + arch + "-u-boot.elf", '-o', inDir + "/openwrt-" + arch + "-u-boot.mbn", '-v', "6"], cwd=cdir)
+		prc = subprocess.Popen(['python', bootconfig_path, '-a', arch, '-f', inDir + "/openwrt-" + arch + "-u-boot.elf", '-o', inDir + "/openwrt-" + arch + "-u-boot.mbn", '-v', "6"], cwd=cdir)
 
 		if os.path.exists(tiny_path):
-			 prc = subprocess.Popen(['python', bootconfig_path, '-f', inDir + "/openwrt-" + arch + "_tiny" + "-u-boot.elf", '-o', inDir + "/openwrt-" + arch + "_tiny" + "-u-boot.mbn", '-v', "6"], cwd=cdir)
+			 prc = subprocess.Popen(['python', bootconfig_path, '-a', arch, '-f', inDir + "/openwrt-" + arch + "_tiny" + "-u-boot.elf", '-o', inDir + "/openwrt-" + arch + "_tiny" + "-u-boot.mbn", '-v', "6"], cwd=cdir)
 
 	prc.wait()
+
+	if arch == "devsoc":
+		arch = "ipq5332"
 
 	if prc.returncode != 0:
 		print 'ERROR: unable to convert U-Boot .elf to .mbn'
@@ -252,13 +259,13 @@ def main():
 		for option, value in opts:
 			if option == "--arch":
 				arch = value
-				if arch not in ["ipq40xx", "ipq806x", "ipq807x", "ipq807x_64", "ipq6018", "ipq6018_64", "ipq5018", "ipq5018_64", "ipq9048", "ipq9048_64"]:
+				if arch not in ["ipq40xx", "ipq806x", "ipq807x", "ipq807x_64", "ipq6018", "ipq6018_64", "ipq5018", "ipq5018_64", "ipq9574", "ipq9574_64", "ipq5332", "ipq5332_64"]:
 					print "Invalid arch type: " + arch
 					print_help()
 					return -1
-				if arch == "ipq807x" or arch == "ipq5018" or arch == "ipq9048":
+				if arch == "ipq807x" or arch == "ipq5018" or arch == "ipq9574" or arch == "ipq5332":
 					mode = "32"
-				elif arch == "ipq807x_64" or arch == "ipq5018_64" or arch == "ipq9048_64":
+				elif arch == "ipq807x_64" or arch == "ipq5018_64" or arch == "ipq9574_64" or arch == "ipq5332_64":
 					mode = "64"
 					arch = arch[:-3]
 
@@ -348,8 +355,8 @@ def main():
 				return -1
 
 		if to_generate_mbn == "true":
-			if arch == "ipq807x" or arch == "ipq6018" or arch == "ipq5018" or arch == "ipq9048":
-				if arch == "ipq6018":
+			if arch == "ipq807x" or arch == "ipq6018" or arch == "ipq5018" or arch == "ipq9574" or arch == "ipq5332":
+				if arch == "ipq6018" or arch == "ipq9574" or arch == "ipq5332":
 					mbn_v6 = "true"
 				if gen_mbn() != 0:
 					return -1
@@ -357,7 +364,7 @@ def main():
                                         return -1
 			else:
 				print "Invalid arch \"" + arch + "\" for mbn conversion"
-				print "--genmbn is needed/used only for ipq807x, ipq6018, ipq5018 and ipq9048 type"
+				print "--genmbn is needed/used only for ipq807x, ipq6018, ipq5018, ipq9574 and ipq5332 type"
 		return 0
 	else:
 		print_help()
